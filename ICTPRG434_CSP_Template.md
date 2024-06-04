@@ -3,136 +3,217 @@ title: "ICTPRG434 Collaborative Software Project"
 author: 
  - Jarna Salonen (13229846)
  - Shehreen Haider (13247624)
+ - Nick Woolcock
 ---
 
 # Executive Summary
 
-Brief summary of the report that provides a high-level overview of the project
+This report details the development of a host-based domain checker aimed at enhancing the management and monitoring of domain assets across various hosting platforms. The project leverages automation and advanced querying techniques to meet the needs of administrators and stakeholders in domain infrastructure oversight.
 
 # Project Overview
 
 ## Introduction
 
-Detailed background information on the chosen case study, the need for automation, and the objectives of the project.
-
 This project introduces a comprehensive host-based domain checker, designed to streamline the management and monitoring of domain assets across diverse hosting platforms. By harnessing automation and leveraging advanced querying techniques, this tool aims to address the evolving needs of administrators and stakeholders tasked with overseeing domain infrastructures.
 
 ## Team Structure and Roles
 
-A description of how your team was organised, including the roles and responsibilities of each member.
+Our team was organized to maximize efficiency and ensure clear role distribution. The roles and responsibilities were as follows:
+
+- **Jarna Salonen (13229846)**: Project Manager. Responsible for project oversight, code development, and testing.
+- **Shehreen Haider (13247624)**: Lead Developer. Responsible for project oversight, code development, and testing.
+- **Nick Woolcock**(): Documentation Specialist and Tester. Responsible for creating project documentation and conducting rigorous testing.
 
 ## Problem Analysis and Requirements
 
-A thorough analysis of the problem presented in the case study and the specific requirements for the automation solution.
+We analyzed the need for a domain checker that automates the process of managing domain assets. The requirements for the solution included:
+
+The ability to accept user-defined options for blocking specific content types (advertisements, malware, tracking).
+Reading URLs of domain block-lists from a configuration file.
+Downloading, parsing, and merging hosts files into a unique list of domains.
+Backing up the original hosts file with the option to restore it.
+Appending blocked domains to the existing hosts file without replacing it.
+Ensuring cross-platform compatibility for Windows and Linux.
 
 # Design Process
 
 ## Conceptual Design
 
-Outline of the initial ideas and conceptual approach to the problem.
+The initial concept focused on a user-friendly tool that automates domain management tasks. Key considerations included ease of use, reliability, and extensibility.
 
 ## Algorithm Design
 
-Detailed presentation of the developed algorithm, including flowcharts and pseudocode. See [this guide on creating mermaid flowcharts](https://mermaid.js.org/syntax/flowchart.html).
+Our algorithm parses and updates the hosts file based on user preferences. Below is a flowchart representing the algorithm.
+
+flowchart LR
+ A(Start) --> B[Input Preferences]
+ B --> C[Download Block Lists]
+ C --> D[Parse Lists]
+ D --> E[Backup Hosts File]
+ E --> F[Append to Hosts File]
+ F --> G(End)
 
 ```mermaid
 flowchart LR
-    A(Start) --> B[Input Year]
-    B --> C{Is year divisible by 4?}
-    C -- Yes --> D{Is year divisible by 100?}
-    C -- No --> E[Not a leap year]
-    D -- Yes --> F{Is year divisible by 400?}
-    D -- No --> G[Leap year]
-    F -- Yes --> G
-    F -- No --> E
-    G --> H(End)
-    E --> H(End)
+    A(Start) --> B[Input Preferences]
+    B --> C[Download Block Lists]
+    C --> D[Parse Lists]
+    D --> E[Backup Hosts File]
+    E --> F[Append to Hosts File]
+    F --> G(End)
 ```
 
 ```
-FUNCTION isLeapYear(year):
-    IF year MODULO 4 IS NOT EQUAL TO 0:
-        RETURN False
-    ELSE IF year MODULO 100 IS NOT EQUAL TO 0:
-        RETURN True
-    ELSE IF year MODULO 400 IS EQUAL TO 0:
-        RETURN True
-    ELSE:
-        RETURN False
-
-year = INPUT "Enter a year: "
-IF isLeapYear(year):
-    PRINT year, "is a leap year."
-ELSE:
-    PRINT year, "is not a leap year."
+FUNCTION update_hosts_file(preferences):
+    IF preferences NOT SELECTED:
+        RETURN "Error: No preferences selected"
+    URLs = GET_URLs_FROM_CONFIG(preferences)
+    domains = DOWNLOAD_AND_PARSE_LISTS(URLs)
+    hosts_path = GET_HOSTS_FILE_PATH()
+    BACKUP_HOSTS_FILE(hosts_path)
+    APPEND_TO_HOSTS_FILE(hosts_path, domains)
+    RETURN "Success: Hosts file updated"
 ```
 
 ## Software Design
 
-Explanation of the software design, including the choice of programming language and the software architecture.
+The software is designed in Python due to its simplicity and extensive library support. The architecture includes modules for configuration management, URL fetching, file manipulation, and user interaction through a GUI.
 
 # Implementation
 
 ## Code Development
 
-The actual code written for the project, with appropriate comments and explanations. If appropriate, this can just be a note to refer to a particular source code file or repository.
+The code developed for this project includes functions for downloading and parsing domain lists, backing up and updating the hosts file, and a GUI for user interaction. The main script integrates these components.
 
 ```python
-#!/usr/bin/env python3
+import os
+import platform
+import shutil
+import requests
+import re
+import json
+import tkinter as tk
+from tkinter import messagebox
+from datetime import datetime
 
-def is_leap_year(year):
-    """Determine if a year is a leap year."""
-    if year % 4 != 0:
-        return False
-    elif year % 100 != 0:
-        return True
-    elif year % 400 == 0:
-        return True
+CONFIG_FILE = 'config.json'
+
+def get_hosts_file_path():
+    return r'D:\test\hosts' if platform.system() == 'Windows' else '/etc/hosts'
+
+def backup_hosts_file(hosts_path):
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    backup_path = f"{hosts_path}_backup_{timestamp}"
+    shutil.copy2(hosts_path, backup_path)
+    shutil.copy2(hosts_path, 'hosts_last_used')
+    return backup_path
+
+def restore_hosts_file():
+    hosts_path = get_hosts_file_path()
+    if os.path.exists('hosts_last_used'):
+        shutil.copy2('hosts_last_used', hosts_path)
+        messagebox.showinfo("Restore", "Hosts file restored to the last used state.")
     else:
-        return False
+        messagebox.showerror("Restore", "No backup found to restore.")
 
-# Input from the user
-year = int(input("Enter a year: "))
+def download_and_parse_lists(urls):
+    domains = set()
+    for url in urls:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            # Debug print to check the content of the response
+            print(f"Content from {url}:\n{response.text[:500]}...\n")  # Print first 500 characters
+            domains.update(re.findall(r'^\s*(?:0\.0\.0\.0|127\.0\.0\.1)\s+(\S+)', response.text, re.MULTILINE))
+        except requests.RequestException as e:
+            print(f"Failed to download {url}: {e}")
+    return domains
 
-# Check and display the result
-if is_leap_year(year):
-    print(f"{year} is a leap year.")
-else:
-    print(f"{year} is not a leap year.")
+
+def append_to_hosts_file(hosts_path, domains):
+    with open(hosts_path, 'a') as hosts_file:
+        hosts_file.write('\n'.join(f"0.0.0.0 {domain}" for domain in domains) + '\n')
+
+def update_hosts_file(block_ads, block_malware, block_tracking, block_malicious):
+    with open(CONFIG_FILE, 'r') as file:
+        config = json.load(file)
+
+    urls = []
+    if block_ads:
+        urls.extend(config.get('ad_block_lists', []))
+    if block_malware:
+        urls.extend(config.get('malware_block_lists', []))
+    if block_tracking:
+        urls.extend(config.get('tracking_block_lists', []))
+    if block_malicious:
+        urls.extend(config.get('malicious_block_lists', []))
+
+    if not urls:
+        messagebox.showerror("Error", "No block lists selected.")
+        return
+
+    domains = download_and_parse_lists(urls)
+    hosts_path = get_hosts_file_path()
+    backup_hosts_file(hosts_path)
+    append_to_hosts_file(hosts_path, domains)
+    messagebox.showinfo("Success", "Hosts file updated successfully.")
+
+def create_gui():
+    root = tk.Tk()
+    root.title("Hosts-Based Domain Blocker")
+
+    tk.Label(root, text="Select the types of content to block:").pack(pady=10)
+
+    block_ads = tk.BooleanVar()
+    block_malware = tk.BooleanVar()
+    block_tracking = tk.BooleanVar()
+    block_malicious = tk.BooleanVar()
+
+    tk.Checkbutton(root, text="Advertisements", variable=block_ads).pack(anchor='w')
+    tk.Checkbutton(root, text="Malware", variable=block_malware).pack(anchor='w')
+    tk.Checkbutton(root, text="Tracking", variable=block_tracking).pack(anchor='w')
+    tk.Checkbutton(root, text="Malicious", variable=block_malicious).pack(anchor='w')
+
+    tk.Button(root, text="Update Hosts File", command=lambda: update_hosts_file(block_ads.get(), block_malware.get(), block_tracking.get(), block_malicious)).pack(pady=10)
+    tk.Button(root, text="Restore Hosts File", command=restore_hosts_file).pack(pady=10)
+
+    root.mainloop()
+
+if __name__ == '__main__':
+    create_gui()
+## Testing and Debugging
 ```
 
 ## Testing and Debugging
 
-Documentation of the testing process, including test cases, results, and any debugging carried out.
+Testing involved verifying the program's ability to download block lists, parse domain entries, back up the hosts file, and update it without issues. We used a combination of unit tests and manual testing to ensure robustness.
 
 # Collaboration and Project Management
 
 ## Meeting Notes
 
-Records of team meetings, including decisions made and action items.
+Regular team meetings were held to discuss progress, address challenges, and plan upcoming tasks. Decisions and action items were documented for reference.
 
 ## Project Management Tools and Techniques
 
-Overview of the tools and methodologies used for project management and collaboration.
+We used tools such as Trello for task management, GitHub for version control, and Slack for communication. Agile methodologies were employed to maintain flexibility and ensure timely delivery of project milestones.
 
 # Documentation
 
 ## Developer Documentation
 
-Detailed explanation of the code and architecture, aimed at future developers who might work on or maintain the project.
+The developer documentation includes detailed explanations of the code structure, functions, and modules. This ensures future developers can easily understand and maintain the project.
 
 ## User Documentation
 
-User-friendly guide or manual, explaining how to use the automated solution. It is recommended that you add this as a separate document, rather than putting the documentation here.
+A separate user manual has been created to guide end-users on how to install, configure, and use the domain blocker tool. This document is available in the project repository.
 
 # Reflection and Conclusion
 
-Reflection on the challenges faced during the project and how they were overcome, along with a discussion of the learning outcomes and skills developed. Summarise the project results, its success in meeting the objectives, and potential areas for future development or improvement.
+The project presented several challenges, including ensuring cross-platform compatibility and handling various edge cases during domain list parsing. These challenges were overcome through thorough testing and iterative development. The project successfully met its objectives, providing a reliable tool for managing domain block lists. Future improvements could include adding a GUI for configuring block lists and enhancing performance for large domain lists.
 
 # Appendices
 
-Links to the code repositories containing the final source code, separate user manuals, presentations, or other documentation (if any).
+Links to the code repositories containing the final source code, user manuals, presentations, and other documentation:
 
-Any other relevant materials, such as additional diagrams, extended testing documentation, or supplementary research.
-
-References: A list of all the sources referenced throughout the project.
+[GitHub Repository]
