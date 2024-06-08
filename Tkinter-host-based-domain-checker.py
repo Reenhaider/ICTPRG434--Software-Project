@@ -48,7 +48,7 @@ def append_to_hosts_file(hosts_path, domains):
     with open(hosts_path, 'a') as hosts_file:
         hosts_file.write('\n'.join(f"0.0.0.0 {domain}" for domain in domains) + '\n')
 
-def update_hosts_file(block_ads, block_malware, block_tracking, block_malicious):
+def update_hosts_file(block_ads, block_malware, block_tracking, block_malicious,log_text):
     with open(CONFIG_FILE, 'r') as file:
         config = json.load(file)
 
@@ -70,6 +70,7 @@ def update_hosts_file(block_ads, block_malware, block_tracking, block_malicious)
     hosts_path = get_hosts_file_path()
     backup_hosts_file(hosts_path)
     append_to_hosts_file(hosts_path, domains)
+    log_text.insert(tk.END, "Hosts file updated successfully.\n")
     messagebox.showinfo("Success", "Hosts file updated successfully.")
 
 def create_gui():
@@ -78,20 +79,36 @@ def create_gui():
     root.geometry('300x200')  # Set the window size
     root.configure(bg='lightgrey')  # Set the background color
 
-    ttk.Label(root, text="Select the types of content to block:").pack(pady=10)
+    frame = ttk.Frame(root, padding="10")
+    frame.pack(fill='both', expand=True)
+
+    label = ttk.Label(frame, text="Select the types of content to block:")
+    label.grid(row=0, column=0, columnspan=2, pady=10)
 
     block_ads = tk.BooleanVar()
     block_malware = tk.BooleanVar()
     block_tracking = tk.BooleanVar()
     block_malicious = tk.BooleanVar()
 
-    ttk.Checkbutton(root, text="Advertisements", variable=block_ads).pack(anchor='w')
-    ttk.Checkbutton(root, text="Malware", variable=block_malware).pack(anchor='w')
-    ttk.Checkbutton(root, text="Tracking", variable=block_tracking).pack(anchor='w')
-    ttk.Checkbutton(root, text="Malicious", variable=block_malicious).pack(anchor='w')
+    ttk.Checkbutton(frame, text="Advertisements", variable=block_ads).grid(row=1, column=0, sticky='w')
+    ttk.Checkbutton(frame, text="Malware", variable=block_malware).grid(row=2, column=0, sticky='w')
+    ttk.Checkbutton(frame, text="Tracking", variable=block_tracking).grid(row=3, column=0, sticky='w')
+    ttk.Checkbutton(frame, text="Malicious", variable=block_malicious).grid(row=4, column=0, sticky='w')
 
-    ttk.Button(root, text="Update Hosts File", command=lambda: update_hosts_file(block_ads.get(), block_malware.get(), block_tracking.get(), block_malicious.get())).pack(pady=10)
-    ttk.Button(root, text="Restore Hosts File", command=restore_hosts_file).pack(pady=10)
+    #ttk.Button(root, text="Update Hosts File", command=lambda: update_hosts_file(block_ads.get(), block_malware.get(), block_tracking.get(), block_malicious.get())).pack(pady=10)
+    #ttk.Button(root, text="Restore Hosts File", command=restore_hosts_file).pack(pady=10)
+
+    log_text = tk.Text(frame, height=10, wrap='word')
+    log_text.grid(row=5, column=0, columnspan=2, pady=10, sticky='nsew')
+
+    frame.grid_rowconfigure(5, weight=1)
+    frame.grid_columnconfigure(1, weight=1)
+
+    update_button = ttk.Button(frame, text="Update Hosts File", command=lambda: update_hosts_file(block_ads.get(), block_malware.get(), block_tracking.get(), block_malicious.get(), log_text))
+    update_button.grid(row=6, column=0, pady=10)
+
+    restore_button = ttk.Button(frame, text="Restore Hosts File", command=restore_hosts_file)
+    restore_button.grid(row=6, column=1, pady=10)
 
     root.mainloop()
 
