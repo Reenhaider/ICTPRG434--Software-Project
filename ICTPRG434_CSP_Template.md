@@ -184,7 +184,7 @@ if __name__ == '__main__':
 ## Testing and Debugging
 ```
 
-## Testing and Debugging
+## Testing and Debugging -Jarna
 
 Testing involved verifying the program's ability to download block lists, parse domain entries, back up the hosts file, and update it without issues. We used a combination of unit tests and manual testing to ensure robustness.
 
@@ -200,11 +200,11 @@ We used tools such as Trello for task management, GitHub for version control, an
 
 # Documentation
 
-## Developer Documentation
+## Developer Documentation -Jarna
 
 The developer documentation includes detailed explanations of the code structure, functions, and modules. This ensures future developers can easily understand and maintain the project.
 
-## User Documentation
+## User Documentation -shehreen
 
 A separate user manual has been created to guide end-users on how to install, configure, and use the domain blocker tool. This document is available in the project repository.
 
